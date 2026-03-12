@@ -1,42 +1,139 @@
 {% extends "base.html" %}
-{% block title %}CampusConnect – Campus Event Management{% endblock %}
+{% block title %}Login – CampusConnect{% endblock %}
+
 {% block content %}
-<div class="landing">
-  <div class="landing-hero">
-    <div class="hero-text">
-      <h1><i class="fas fa-university"></i> CampusConnect</h1>
-      <p>Real-time event scheduling, venue booking, and campus coordination — all in one place.</p>
-      <div class="hero-actions">
-        <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
-          <i class="fas fa-sign-in-alt"></i> Login
-        </a>
-        <a href="{{ url_for('auth.register') }}" class="btn btn-outline btn-lg">
-          <i class="fas fa-user-plus"></i> Register
-        </a>
+
+<div class="auth-container">
+  <div class="auth-card">
+
+    <div class="auth-header">
+      <i class="fas fa-university"></i>
+      <h2>Welcome Back</h2>
+      <p>Sign in to your campus account</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}" style="margin-bottom:1rem;">
+          <span>{{ msg }}</span>
+          <button onclick="this.parentElement.remove()">×</button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Login error container -->
+    <div id="loginError" class="alert alert-danger" style="display:none; margin-bottom:1rem;"></div>
+
+    <div class="form-group">
+      <label><i class="fas fa-envelope"></i> Email</label>
+      <input type="email" id="loginEmail" class="form-control"
+             placeholder="your@campus.edu" autocomplete="email"/>
+    </div>
+
+    <div class="form-group">
+      <label><i class="fas fa-lock"></i> Password</label>
+      <div class="input-icon-right">
+        <input type="password" id="loginPassword" class="form-control"
+               placeholder="••••••••" autocomplete="current-password"/>
+        <i class="fas fa-eye toggle-pwd"
+           onclick="togglePwd('loginPassword', this)"></i>
       </div>
     </div>
-    <div class="hero-features">
-      <div class="feature-card">
-        <i class="fas fa-calendar-check"></i>
-        <h3>Smart Scheduling</h3>
-        <p>Conflict-free event scheduling with real-time venue availability.</p>
-      </div>
-      <div class="feature-card">
-        <i class="fas fa-tasks"></i>
-        <h3>Multi-Role Approvals</h3>
-        <p>Admin, Faculty, and Student roles with streamlined approval workflows.</p>
-      </div>
-      <div class="feature-card">
-        <i class="fas fa-bell"></i>
-        <h3>Live Notifications</h3>
-        <p>Instant updates on approvals, cancellations, and registrations.</p>
-      </div>
-      <div class="feature-card">
-        <i class="fas fa-chart-bar"></i>
-        <h3>Resource Analytics</h3>
-        <p>Track venue usage and event attendance at a glance.</p>
-      </div>
-    </div>
+
+    <button class="btn btn-primary btn-block" id="loginBtn">
+      <i class="fas fa-sign-in-alt"></i> Sign In
+    </button>
+
+    <p class="auth-footer">
+      Don't have an account? <a href="/register">Register here</a>
+    </p>
+
   </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+async function doLogin() {
+  const errEl      = document.getElementById('loginError');
+  const btn        = document.getElementById('loginBtn');
+  const emailInput = document.getElementById('loginEmail');
+  const passInput  = document.getElementById('loginPassword');
+
+  if (!errEl || !btn || !emailInput || !passInput) {
+    console.error("Login elements not found in DOM");
+    return;
+  }
+
+  errEl.style.display = 'none';
+
+  const email    = (emailInput.value || '').trim();
+  const password = passInput.value || '';
+
+  if (!email || !password) {
+    errEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Please enter your email and password.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled  = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in…';
+
+  let res, data;
+
+  try {
+    res = await fetch('/login', {
+      method : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept'      : 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
+  } catch (err) {
+    errEl.innerHTML    = '<i class="fas fa-exclamation-circle"></i> Network error — is Flask running?';
+    errEl.style.display = 'block';
+    btn.disabled  = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+    return;
+  }
+
+  try {
+    data = await res.json();
+  } catch (e) {
+    errEl.innerHTML    = `<i class="fas fa-exclamation-circle"></i> Server error (HTTP ${res.status}).`;
+    errEl.style.display = 'block';
+    btn.disabled  = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+    return;
+  }
+
+  if (res.ok && data.success) {
+    btn.innerHTML = '<i class="fas fa-check"></i> Success!';
+    window.location.href = data.redirect || '/dashboard';
+  } else {
+    errEl.innerHTML    = `<i class="fas fa-exclamation-circle"></i> ${data.error || 'Login failed.'}`;
+    errEl.style.display = 'block';
+    btn.disabled  = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn   = document.getElementById('loginBtn');
+  const email = document.getElementById('loginEmail');
+  const pass  = document.getElementById('loginPassword');
+
+  if (btn) btn.addEventListener('click', doLogin);
+
+  [email, pass].forEach(el => {
+    if (el) el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+  });
+});
+
+</script>
 {% endblock %}

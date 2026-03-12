@@ -1,15 +1,25 @@
 {% extends "base.html" %}
 {% block title %}Events – CampusConnect{% endblock %}
+
 {% block content %}
 <div class="page-header">
-  <h1><i class="fas fa-calendar-alt"></i> Campus Events</h1>
-  {% if current_user.role in ['admin','faculty'] %}
-  <button class="btn btn-primary" onclick="openCreateEventModal()">
-    <i class="fas fa-plus"></i> New Event
-  </button>
+  <div>
+    <h1><i class="fas fa-calendar-alt"></i> Campus Events</h1>
+    <span class="text-muted">Browse and register for upcoming events</span>
+  </div>
+  {% if current_user.role in ['admin', 'faculty'] %}
+  <div style="display:flex; gap:.5rem;">
+    <a href="/events/new" class="btn btn-outline">
+      <i class="fas fa-edit"></i> Full Form
+    </a>
+    <button class="btn btn-primary" onclick="openCreateEventModal()">
+      <i class="fas fa-plus"></i> Quick Create
+    </button>
+  </div>
   {% endif %}
 </div>
 
+<!-- ── Filters ──────────────────────────────────────────────────── -->
 <div class="filter-bar">
   <div class="filter-group">
     <label>Status</label>
@@ -29,23 +39,115 @@
       <option value="sports">Sports</option>
       <option value="seminar">Seminar</option>
       <option value="workshop">Workshop</option>
+      <option value="other">Other</option>
     </select>
   </div>
-  <div class="filter-group search-group">
-    <input type="text" id="searchEvents" class="form-control form-control-sm" 
-           placeholder="Search events..." onkeyup="filterEvents()"/>
-    <i class="fas fa-search"></i>
+  <div class="filter-group search-group" style="flex:1; min-width:200px;">
+    <label>Search</label>
+    <div style="position:relative;">
+      <input type="text" id="searchEvents" class="form-control form-control-sm"
+             placeholder="Search events…" oninput="filterEvents()"/>
+      <i class="fas fa-search"
+         style="position:absolute;right:.65rem;top:50%;transform:translateY(-50%);
+                color:var(--text-muted);font-size:.8rem;pointer-events:none;"></i>
+    </div>
+  </div>
+  <div class="filter-group" style="align-self:flex-end;">
+    <button class="btn btn-outline btn-sm" onclick="resetEventFilters()">
+      <i class="fas fa-undo"></i> Reset
+    </button>
   </div>
 </div>
 
+<!-- ── Results count ────────────────────────────────────────────── -->
+<p id="eventsCount" style="font-size:.82rem; color:var(--text-muted); margin-bottom:.75rem;"></p>
+
+<!-- ── Grid ─────────────────────────────────────────────────────── -->
 <div id="eventsGrid" class="events-grid">
-  <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading events...</div>
+  <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading events…</div>
 </div>
 
-{% include 'events/_create_modal.html' %}
+<!-- ── Quick-Create Modal (inline, no include needed) ───────────── -->
+<div class="modal" id="createEventModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <h3><i class="fas fa-calendar-plus"></i> Quick Create Event</h3>
+      <button onclick="closeModal('createEventModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="createEventError" class="alert alert-danger" style="display:none"></div>
+      <div class="form-row">
+        <div class="form-group form-group-2">
+          <label>Event Title *</label>
+          <input type="text" id="evTitle" class="form-control" placeholder="Annual Tech Symposium"/>
+        </div>
+        <div class="form-group">
+          <label>Type *</label>
+          <select id="evType" class="form-control">
+            <option value="academic">Academic</option>
+            <option value="cultural">Cultural</option>
+            <option value="sports">Sports</option>
+            <option value="seminar">Seminar</option>
+            <option value="workshop">Workshop</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="evDesc" class="form-control" rows="3" placeholder="Event details…"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Start Date & Time *</label>
+          <input type="datetime-local" id="evStart" class="form-control"/>
+        </div>
+        <div class="form-group">
+          <label>End Date & Time *</label>
+          <input type="datetime-local" id="evEnd" class="form-control"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Venue</label>
+          <select id="evVenue" class="form-control">
+            <option value="">-- No Venue --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Max Attendees</label>
+          <input type="number" id="evMax" class="form-control" value="100" min="1"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="evPublic" checked/>
+          <span>Make this event public</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('createEventModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitCreateEvent()">
+        <i class="fas fa-paper-plane"></i> Submit for Approval
+      </button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
+
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/events.js') }}"></script>
-<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
-<script>loadEventsGrid();</script>
+<script src="/static/js/events.js"></script>
+<script src="/static/js/notifications.js"></script>
+<script>
+  loadEventsGrid();
+
+  function resetEventFilters() {
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterType').value   = '';
+    document.getElementById('searchEvents').value = '';
+    filterEvents();
+  }
+</script>
 {% endblock %}

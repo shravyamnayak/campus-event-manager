@@ -1,0 +1,264 @@
+<!-- ── Create Event Modal ─────────────────────────────────────────── -->
+<div class="modal" id="createEventModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="fas fa-calendar-plus"></i> Create New Event</h3>
+      <button class="modal-close" onclick="closeModal('createEventModal')">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div id="createEventError" class="alert alert-danger" style="display:none"></div>
+
+      <!-- Title -->
+      <div class="form-group">
+        <label>Event Title <span class="required">*</span></label>
+        <input type="text" id="evTitle" class="form-control"
+               placeholder="e.g. Annual Tech Symposium"/>
+      </div>
+
+      <!-- Type + Max Attendees -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Event Type <span class="required">*</span></label>
+          <select id="evType" class="form-control">
+            <option value="academic">Academic</option>
+            <option value="cultural">Cultural</option>
+            <option value="sports">Sports</option>
+            <option value="seminar">Seminar</option>
+            <option value="workshop">Workshop</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Max Attendees <span class="required">*</span></label>
+          <input type="number" id="evMax" class="form-control"
+                 min="1" placeholder="100" value="100"/>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="evDesc" class="form-control" rows="3"
+                  placeholder="Describe the event — agenda, speakers, requirements…"></textarea>
+      </div>
+
+      <!-- Start + End -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Start Date & Time <span class="required">*</span></label>
+          <input type="datetime-local" id="evStart" class="form-control"/>
+        </div>
+        <div class="form-group">
+          <label>End Date & Time <span class="required">*</span></label>
+          <input type="datetime-local" id="evEnd" class="form-control"/>
+        </div>
+      </div>
+      <p class="form-hint" id="modalDurationHint" style="font-size:.82rem; margin-top:-.5rem; margin-bottom:.75rem;"></p>
+
+      <!-- Venue -->
+      <div class="form-group">
+        <label>Venue</label>
+        <select id="evVenue" class="form-control">
+          <option value="">-- No specific venue --</option>
+        </select>
+      </div>
+
+      <!-- Public toggle -->
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="evPublic" checked/>
+          <span>Make this event visible to all campus members</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('createEventModal')">
+        <i class="fas fa-times"></i> Cancel
+      </button>
+      <button class="btn btn-primary" id="createEventBtn" onclick="submitCreateEvent()">
+        <i class="fas fa-paper-plane"></i> Submit for Approval
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .modal.active { display: flex; }
+  .modal-dialog {
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: .25rem;
+    border-radius: 4px;
+    transition: color .2s;
+  }
+  .modal-close:hover { color: var(--danger); }
+  .modal-body { padding: 1.5rem; flex: 1; }
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: .75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .required { color: var(--danger); }
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .9rem;
+    cursor: pointer;
+  }
+</style>
+
+<script>
+  // ── Open modal & load venues ───────────────────────────────
+  async function openCreateEventModal() {
+    // Reset form
+    ['evTitle','evDesc','evStart','evEnd'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const evMax = document.getElementById('evMax');
+    if (evMax) evMax.value = 100;
+    const evPublic = document.getElementById('evPublic');
+    if (evPublic) evPublic.checked = true;
+    const errEl = document.getElementById('createEventError');
+    if (errEl) errEl.style.display = 'none';
+
+    openModal('createEventModal');
+    await loadModalVenues();
+  }
+
+  async function loadModalVenues() {
+    const sel = document.getElementById('evVenue');
+    if (!sel) return;
+    // Clear existing options except first
+    while (sel.options.length > 1) sel.remove(1);
+
+    const { ok, data } = await apiFetch('/api/venues');
+    if (!ok) return;
+    data.filter(v => v.is_available).forEach(v => {
+      const opt = document.createElement('option');
+      opt.value       = v.id;
+      opt.textContent = `${v.name} (cap: ${v.capacity})`;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ── Duration hint ──────────────────────────────────────────
+  function updateModalDuration() {
+    const s    = document.getElementById('evStart')?.value;
+    const e    = document.getElementById('evEnd')?.value;
+    const hint = document.getElementById('modalDurationHint');
+    if (!hint) return;
+    if (!s || !e) { hint.textContent = ''; return; }
+    const diff = (new Date(e) - new Date(s)) / 60000;
+    if (diff <= 0) {
+      hint.textContent  = '⚠ End time must be after start time.';
+      hint.style.color  = 'var(--danger)';
+    } else {
+      const h = Math.floor(diff / 60), m = diff % 60;
+      hint.textContent  = `Duration: ${h > 0 ? h + 'h ' : ''}${m > 0 ? m + 'm' : ''}`;
+      hint.style.color  = 'var(--primary)';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('evStart')?.addEventListener('change', updateModalDuration);
+    document.getElementById('evEnd')?.addEventListener('change', updateModalDuration);
+  });
+
+  // ── Submit ─────────────────────────────────────────────────
+  async function submitCreateEvent() {
+    const errEl = document.getElementById('createEventError');
+    const btn   = document.getElementById('createEventBtn');
+
+    const payload = {
+      title         : document.getElementById('evTitle')?.value.trim(),
+      description   : document.getElementById('evDesc')?.value.trim(),
+      event_type    : document.getElementById('evType')?.value,
+      start_datetime: document.getElementById('evStart')?.value,
+      end_datetime  : document.getElementById('evEnd')?.value,
+      venue_id      : document.getElementById('evVenue')?.value || null,
+      max_attendees : document.getElementById('evMax')?.value,
+      is_public     : document.getElementById('evPublic')?.checked,
+    };
+
+    // Validation
+    if (!payload.title) {
+      errEl.textContent   = 'Event title is required.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (!payload.start_datetime || !payload.end_datetime) {
+      errEl.textContent   = 'Start and end date/time are required.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (new Date(payload.end_datetime) <= new Date(payload.start_datetime)) {
+      errEl.textContent   = 'End time must be after start time.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled  = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting…';
+
+    const { ok, data } = await apiFetch('/api/events', 'POST', payload);
+
+    if (ok) {
+      closeModal('createEventModal');
+      showToast('Event submitted for approval!', 'success');
+      setTimeout(() => window.location.reload(), 900);
+    } else {
+      errEl.textContent   = data.error || 'Failed to create event.';
+      errEl.style.display = 'block';
+      btn.disabled  = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit for Approval';
+    }
+  }
+</script>

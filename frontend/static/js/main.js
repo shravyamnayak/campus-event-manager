@@ -62,6 +62,10 @@ document.addEventListener('click', (e) => {
 });
 
 // Auto-dismiss alerts after 4s
-document.querySelectorAll('.alert').forEach(a => {
-  setTimeout(() => a.remove(), 4000);
+// IMPORTANT: only target alerts inside .flash-container (server flash messages)
+// Do NOT touch #loginError, #regError etc. — those are controlled by JS logic
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.flash-container .alert').forEach(a => {
+    setTimeout(() => a.remove(), 4000);
+  });
 });

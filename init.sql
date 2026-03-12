@@ -61,15 +61,15 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Seed admin user (password: admin123)
-INSERT IGNORE INTO users (name, email, password_hash, role, department) VALUES
-('System Admin', 'admin@campus.edu', 'scrypt:32768:8:1$salt$hash', 'admin', 'Administration');
-
 -- Seed venues
 INSERT IGNORE INTO venues (name, location, capacity, amenities) VALUES
-('Main Auditorium', 'Block A, Ground Floor', 500, 'Projector, Sound System, AC, Stage'),
-('Seminar Hall 1', 'Block B, First Floor', 100, 'Projector, Whiteboard, AC'),
-('Seminar Hall 2', 'Block B, Second Floor', 80, 'Projector, Whiteboard'),
-('Sports Ground', 'Campus Ground', 1000, 'Open Ground, Floodlights'),
-('Conference Room', 'Admin Block', 30, 'Projector, Video Conferencing, AC'),
-('Computer Lab 1', 'Block C, Ground Floor', 60, '60 PCs, Projector, AC');
+('Main Auditorium',  'Block A, Ground Floor',  500, 'Projector, Sound System, AC, Stage'),
+('Seminar Hall 1',   'Block B, First Floor',   100, 'Projector, Whiteboard, AC'),
+('Seminar Hall 2',   'Block B, Second Floor',   80, 'Projector, Whiteboard'),
+('Sports Ground',    'Campus Ground',          1000, 'Open Ground, Floodlights'),
+('Conference Room',  'Admin Block',              30, 'Projector, Video Conferencing, AC'),
+('Computer Lab 1',   'Block C, Ground Floor',   60, '60 PCs, Projector, AC');
+
+-- Admin user  password = admin123
+INSERT IGNORE INTO users (name, email, password_hash, role, department) VALUES
+('System Admin', 'admin@campus.edu', 'scrypt:32768:8:1$ukKfc9s0fywZC9ed$082f78ebb3aa8deb6ccf8fded63985b1638978c38ceb51ea290108d414fc113a892144b868700c41db682afa099412689af24c3962bb02e708963f8270fdc4ee', 'admin', 'Administration');

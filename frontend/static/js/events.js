@@ -13,18 +13,30 @@ async function loadEventsGrid() {
 
 function renderEventsGrid(events) {
   const grid = document.getElementById('eventsGrid');
+  const countEl = document.getElementById('eventsCount');
+  if (countEl) countEl.textContent = `${events.length} event${events.length !== 1 ? 's' : ''} found`;
+
   if (!events.length) {
-    grid.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-times"></i><p>No events found.</p></div>';
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <i class="fas fa-calendar-times"></i>
+        <p>No events found. Try adjusting your filters.</p>
+      </div>`;
     return;
   }
   grid.innerHTML = events.map(ev => `
-    <div class="event-card event-card-${ev.status}" data-type="${ev.event_type}" data-status="${ev.status}" data-title="${ev.title.toLowerCase()}">
+    <div class="event-card event-card-${ev.status}"
+         data-type="${ev.event_type}"
+         data-status="${ev.status}"
+         data-title="${ev.title.toLowerCase()}">
       <div class="event-card-header">
         <span class="badge badge-${ev.event_type}">${ev.event_type}</span>
         <span class="status-badge status-${ev.status}">${ev.status}</span>
       </div>
       <h3><a href="/events/${ev.id}">${ev.title}</a></h3>
-      <p class="event-desc">${ev.description ? ev.description.substring(0,100)+'...' : 'No description.'}</p>
+      <p class="event-desc">
+        ${ev.description ? ev.description.substring(0, 100) + '…' : 'No description provided.'}
+      </p>
       <div class="event-card-meta">
         <span><i class="fas fa-calendar"></i> ${formatDateTime(ev.start_datetime)}</span>
         ${ev.venue_name ? `<span><i class="fas fa-map-marker-alt"></i> ${ev.venue_name}</span>` : ''}
@@ -32,8 +44,14 @@ function renderEventsGrid(events) {
         <span><i class="fas fa-user"></i> ${ev.organizer_name}</span>
       </div>
       <div class="event-card-footer">
-        <a href="/events/${ev.id}" class="btn btn-sm btn-outline">View Details</a>
-        ${ev.status === 'approved' ? `<button class="btn btn-sm btn-primary" onclick="registerEvent(${ev.id})">Register</button>` : ''}
+        <a href="/events/${ev.id}" class="btn btn-sm btn-outline">
+          <i class="fas fa-eye"></i> View Details
+        </a>
+        ${ev.status === 'approved'
+          ? `<button class="btn btn-sm btn-primary" onclick="registerEvent(${ev.id})">
+               <i class="fas fa-ticket-alt"></i> Register
+             </button>`
+          : ''}
       </div>
     </div>
   `).join('');
