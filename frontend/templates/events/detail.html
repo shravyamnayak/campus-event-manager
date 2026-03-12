@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('events.list_events') }}" class="btn btn-sm btn-outline">
+      <i class="fas fa-arrow-left"></i> Back
+    </a>
+    <h1>{{ event.title }}</h1>
+  </div>
+  <span class="status-badge status-{{ event.status }} status-lg">{{ event.status|capitalize }}</span>
+</div>
+
+<div class="detail-grid">
+  <div class="detail-main">
+    <div class="detail-card">
+      <div class="detail-badges">
+        <span class="badge badge-{{ event.event_type }}">{{ event.event_type|capitalize }}</span>
+        {% if event.is_ongoing() %}<span class="badge badge-live"><i class="fas fa-circle"></i> LIVE</span>{% endif %}
+        {% if not event.is_public %}<span class="badge badge-private"><i class="fas fa-lock"></i> Private</span>{% endif %}
+      </div>
+      <p class="event-description">{{ event.description or 'No description provided.' }}</p>
+      
+      <div class="detail-meta">
+        <div class="meta-item">
+          <i class="fas fa-calendar-alt"></i>
+          <div>
+            <strong>Start</strong>
+            <span>{{ event.start_datetime.strftime('%B %d, %Y at %H:%M') }}</span>
+          </div>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-calendar-check"></i>
+          <div>
+            <strong>End</strong>
+            <span>{{ event.end_datetime.strftime('%B %d, %Y at %H:%M') }}</span>
+          </div>
+        </div>
+        {% if event.venue %}
+        <div class="meta-item">
+          <i class="fas fa-map-marker-alt"></i>
+          <div>
+            <strong>Venue</strong>
+            <span>{{ event.venue.name }} – {{ event.venue.location }}</span>
+          </div>
+        </div>
+        {% endif %}
+        <div class="meta-item">
+          <i class="fas fa-user-tie"></i>
+          <div>
+            <strong>Organizer</strong>
+            <span>{{ event.organizer.name }} ({{ event.organizer.department or event.organizer.role|capitalize }})</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-sidebar">
+    <div class="detail-card">
+      <h3><i class="fas fa-users"></i> Attendance</h3>
+      <div class="attendance-bar-wrap">
+        <div class="attendance-bar">
+          <div class="attendance-fill" style="width: {{ [(event.attendee_count() / event.max_attendees * 100), 100]|min }}%"></div>
+        </div>
+        <span>{{ event.attendee_count() }} / {{ event.max_attendees }}</span>
+      </div>
+      {% if event.is_full() %}<p class="text-warning"><i class="fas fa-exclamation-circle"></i> Event is full</p>{% endif %}
+      
+      {% if event.status == 'approved' and current_user.role == 'student' %}
+        {% if user_booking and user_booking.status != 'cancelled' %}
+          <div class="booking-status">
+            <span class="status-badge status-{{ user_booking.status }}">
+              {% if user_booking.status == 'registered' %}
+                <i class="fas fa-check-circle"></i> Registered
+              {% else %}
+                <i class="fas fa-hourglass-half"></i> Waitlisted
+              {% endif %}
+            </span>
+            <button class="btn btn-sm btn-danger mt-2" onclick="cancelBooking({{ user_booking.id }}, true)">
+              Cancel Registration
+            </button>
+          </div>
+        {% else %}
+          <button class="btn btn-primary btn-block mt-2" onclick="registerEvent({{ event.id }})">
+            <i class="fas fa-ticket-alt"></i>
+            {% if event.is_full() %}Join Waitlist{% else %}Register Now{% endif %}
+          </button>
+        {% endif %}
+      {% endif %}
+
+      {% if event.organizer_id == current_user.id or current_user.is_admin() %}
+      <hr/>
+      <h4>Actions</h4>
+      {% if event.status == 'pending' and current_user.is_admin() %}
+      <button class="btn btn-success btn-block" onclick="approveEvent({{ event.id }}, 'approve')">
+        <i class="fas fa-check"></i> Approve
+      </button>
+      <button class="btn btn-danger btn-block mt-1" onclick="approveEvent({{ event.id }}, 'reject')">
+        <i class="fas fa-times"></i> Reject
+      </button>
+      {% endif %}
+      {% if event.status in ['pending','approved'] %}
+      <button class="btn btn-warning btn-block mt-1" onclick="cancelEvent({{ event.id }}, true)">
+        <i class="fas fa-ban"></i> Cancel Event
+      </button>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/events.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bookings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+{% endblock %}

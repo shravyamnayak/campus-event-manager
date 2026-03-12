@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Faculty Dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="fas fa-chalkboard-teacher"></i> Faculty Dashboard</h1>
+  <button class="btn btn-primary" onclick="openCreateEventModal()">
+    <i class="fas fa-plus"></i> Create Event
+  </button>
+</div>
+
+<div class="stats-grid stats-grid-3">
+  <div class="stat-card stat-blue">
+    <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
+    <div class="stat-info"><h3>{{ my_events|length }}</h3><p>My Events</p></div>
+  </div>
+  <div class="stat-card stat-green">
+    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+    <div class="stat-info">
+      <h3>{{ my_events|selectattr('status','equalto','approved')|list|length }}</h3>
+      <p>Approved</p>
+    </div>
+  </div>
+  <div class="stat-card stat-orange">
+    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+    <div class="stat-info">
+      <h3>{{ my_events|selectattr('status','equalto','pending')|list|length }}</h3>
+      <p>Pending</p>
+    </div>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  <div class="dash-panel">
+    <div class="panel-header">
+      <h2><i class="fas fa-list"></i> My Events</h2>
+    </div>
+    {% if my_events %}
+    <div class="event-list">
+      {% for event in my_events %}
+      <div class="event-item">
+        <div class="event-type-dot dot-{{ event.event_type }}"></div>
+        <div class="event-info">
+          <h4><a href="{{ url_for('events.event_detail', event_id=event.id) }}">{{ event.title }}</a></h4>
+          <p>
+            <span class="status-badge status-{{ event.status }}">{{ event.status|capitalize }}</span>
+            <span><i class="fas fa-calendar"></i> {{ event.start_datetime.strftime('%b %d, %Y') }}</span>
+            <span><i class="fas fa-users"></i> {{ event.attendee_count() }}/{{ event.max_attendees }}</span>
+          </p>
+        </div>
+        <div class="event-actions">
+          {% if event.status == 'approved' %}
+          <button class="btn btn-sm btn-danger" onclick="cancelEvent({{ event.id }})">Cancel</button>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-calendar-plus"></i><p>No events yet. Create your first event!</p></div>
+    {% endif %}
+  </div>
+
+  <div class="dash-panel">
+    <div class="panel-header">
+      <h2><i class="fas fa-fire"></i> Upcoming Campus Events</h2>
+    </div>
+    <div class="event-list">
+      {% for event in upcoming %}
+      <div class="event-item">
+        <div class="event-type-dot dot-{{ event.event_type }}"></div>
+        <div class="event-info">
+          <h4><a href="{{ url_for('events.event_detail', event_id=event.id) }}">{{ event.title }}</a></h4>
+          <p>
+            <span><i class="fas fa-calendar"></i> {{ event.start_datetime.strftime('%b %d') }}</span>
+            {% if event.venue %}<span><i class="fas fa-map-marker-alt"></i> {{ event.venue.name }}</span>{% endif %}
+          </p>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state"><i class="fas fa-calendar"></i><p>No upcoming events</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% include 'events/_create_modal.html' %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/events.js') }}"></script>
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+{% endblock %}

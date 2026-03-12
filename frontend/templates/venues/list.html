@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Venues – CampusConnect{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="fas fa-map-marker-alt"></i> Campus Venues</h1>
+  {% if current_user.is_admin() %}
+  <button class="btn btn-primary" onclick="openAddVenueModal()">
+    <i class="fas fa-plus"></i> Add Venue
+  </button>
+  {% endif %}
+</div>
+
+<div id="venuesGrid" class="venues-grid">
+  <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+</div>
+
+<!-- Add/Edit Venue Modal -->
+<div class="modal" id="addVenueModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 id="venueModalTitle"><i class="fas fa-map-marker-alt"></i> Add Venue</h3>
+      <button onclick="closeModal('addVenueModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editVenueId"/>
+      <div class="form-group">
+        <label>Venue Name *</label>
+        <input type="text" id="venueName" class="form-control"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" id="venueLocation" class="form-control"/>
+        </div>
+        <div class="form-group">
+          <label>Capacity *</label>
+          <input type="number" id="venueCapacity" class="form-control" min="1"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Amenities</label>
+        <input type="text" id="venueAmenities" class="form-control" placeholder="Projector, AC, Whiteboard"/>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="venueAvailable" checked/>
+          <span>Currently Available</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addVenueModal')">Cancel</button>
+      <button class="btn btn-primary" id="venueSubmitBtn" onclick="submitVenue()">Add Venue</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/venues.js') }}"></script>
+<script>loadVenuesGrid();</script>
+{% endblock %}

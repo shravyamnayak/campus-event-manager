@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}Booking Detail – CampusConnect{% endblock %}
+{% block content %}
+
+{# 
+  This page is reached via /bookings/<booking_id>
+  Add a route in bookings.py:
+    @bookings_bp.route('/bookings/<int:booking_id>')
+    @login_required
+    def booking_detail(booking_id): ...
+  For now it renders with a `booking` context variable.
+#}
+
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('bookings.list_bookings') }}" class="btn btn-sm btn-outline">
+      <i class="fas fa-arrow-left"></i> Back to Bookings
+    </a>
+    <h1><i class="fas fa-ticket-alt"></i> Booking Detail</h1>
+  </div>
+  <span class="status-badge status-{{ booking.status }} status-lg">
+    {{ booking.status | capitalize }}
+  </span>
+</div>
+
+<div class="detail-grid">
+
+  <!-- Main Info -->
+  <div>
+    <div class="detail-card">
+      <h3 style="margin-bottom:1rem; font-size:1.1rem;">
+        <i class="fas fa-calendar-alt" style="color:var(--primary)"></i>
+        Event Information
+      </h3>
+      <div class="detail-meta">
+        <div class="meta-item">
+          <i class="fas fa-heading"></i>
+          <div>
+            <strong>Event Title</strong>
+            <span>
+              <a href="{{ url_for('events.event_detail', event_id=booking.event.id) }}"
+                 style="color:var(--primary); text-decoration:none;">
+                {{ booking.event.title }}
+              </a>
+            </span>
+          </div>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-tag"></i>
+          <div>
+            <strong>Event Type</strong>
+            <span><span class="badge badge-{{ booking.event.event_type }}">{{ booking.event.event_type }}</span></span>
+          </div>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-calendar"></i>
+          <div>
+            <strong>Date & Time</strong>
+            <span>
+              {{ booking.event.start_datetime.strftime('%B %d, %Y at %H:%M') }}
+              → {{ booking.event.end_datetime.strftime('%H:%M') }}
+            </span>
+          </div>
+        </div>
+        {% if booking.event.venue %}
+        <div class="meta-item">
+          <i class="fas fa-map-marker-alt"></i>
+          <div>
+            <strong>Venue</strong>
+            <span>{{ booking.event.venue.name }} — {{ booking.event.venue.location }}</span>
+          </div>
+        </div>
+        {% endif %}
+        <div class="meta-item">
+          <i class="fas fa-user-tie"></i>
+          <div>
+            <strong>Organizer</strong>
+            <span>{{ booking.event.organizer.name }}</span>
+          </div>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-users"></i>
+          <div>
+            <strong>Attendance</strong>
+            <span>{{ booking.event.attendee_count() }} / {{ booking.event.max_attendees }} registered</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-card">
+      <h3 style="margin-bottom:1rem; font-size:1.1rem;">
+        <i class="fas fa-user" style="color:var(--primary)"></i>
+        Registration Information
+      </h3>
+      <div class="detail-meta">
+        <div class="meta-item">
+          <i class="fas fa-user-circle"></i>
+          <div>
+            <strong>Registered By</strong>
+            <span>{{ booking.user.name }}</span>
+          </div>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-envelope"></i>
+          <div>
+            <strong>Email</strong>
+            <span>{{ booking.user.email }}</span>
+          </div>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-building"></i>
+          <div>
+            <strong>Department</strong>
+            <span>{{ booking.user.department or 'N/A' }}</span>
+          </div>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-clock"></i>
+          <div>
+            <strong>Registered At</strong>
+            <span>{{ booking.registered_at.strftime('%B %d, %Y at %H:%M') }}</span>
+          </div>
+        </div>
+        <div class="meta-item">
+          <i class="fas fa-info-circle"></i>
+          <div>
+            <strong>Booking ID</strong>
+            <span>#{{ booking.id }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar Actions -->
+  <div>
+    <div class="detail-card">
+      <h3 style="margin-bottom:1rem; font-size:1rem;">
+        <i class="fas fa-cog" style="color:var(--primary)"></i> Actions
+      </h3>
+
+      {% if booking.status == 'registered' %}
+      <div class="status-block status-block-success">
+        <i class="fas fa-check-circle"></i>
+        <div>
+          <strong>Confirmed Registration</strong>
+          <p>Your seat is reserved for this event.</p>
+        </div>
+      </div>
+      {% elif booking.status == 'waitlisted' %}
+      <div class="status-block status-block-warning">
+        <i class="fas fa-hourglass-half"></i>
+        <div>
+          <strong>On Waitlist</strong>
+          <p>You'll be notified if a spot opens up.</p>
+        </div>
+      </div>
+      {% else %}
+      <div class="status-block status-block-danger">
+        <i class="fas fa-times-circle"></i>
+        <div>
+          <strong>Cancelled</strong>
+          <p>This registration has been cancelled.</p>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if booking.status != 'cancelled' and (booking.user_id == current_user.id or current_user.is_admin()) %}
+      <button
+        class="btn btn-danger btn-block mt-2"
+        onclick="cancelBooking({{ booking.id }}, true)">
+        <i class="fas fa-times"></i> Cancel Registration
+      </button>
+      {% endif %}
+
+      <hr/>
+      <a href="{{ url_for('events.event_detail', event_id=booking.event.id) }}"
+         class="btn btn-outline btn-block">
+        <i class="fas fa-calendar-alt"></i> View Event
+      </a>
+      <a href="{{ url_for('bookings.list_bookings') }}"
+         class="btn btn-outline btn-block mt-1">
+        <i class="fas fa-list"></i> All Bookings
+      </a>
+    </div>
+
+    <!-- Event Status Card -->
+    <div class="detail-card" style="margin-top:0">
+      <h3 style="margin-bottom:.75rem; font-size:.95rem;">
+        <i class="fas fa-broadcast-tower" style="color:var(--primary)"></i> Event Status
+      </h3>
+      <span class="status-badge status-{{ booking.event.status }} status-lg">
+        {{ booking.event.status | capitalize }}
+      </span>
+      {% if booking.event.is_ongoing() %}
+      <p style="margin-top:.5rem; font-size:.82rem; color:var(--success);">
+        <i class="fas fa-circle"></i> This event is happening right now!
+      </p>
+      {% elif booking.event.is_upcoming() %}
+      <p style="margin-top:.5rem; font-size:.82rem; color:var(--text-muted);">
+        <i class="fas fa-clock"></i> Upcoming event
+      </p>
+      {% else %}
+      <p style="margin-top:.5rem; font-size:.82rem; color:var(--text-muted);">
+        <i class="fas fa-check"></i> Event has ended
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/bookings.js') }}"></script>
+<style>
+  .status-block {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    padding: .9rem 1rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: .75rem;
+    font-size: .875rem;
+  }
+  .status-block i { font-size: 1.25rem; margin-top: .1rem; flex-shrink: 0; }
+  .status-block strong { display: block; font-weight: 700; margin-bottom: .2rem; }
+  .status-block p { margin: 0; opacity: .85; font-size: .82rem; }
+  .status-block-success { background: #d1fae5; color: #065f46; }
+  .status-block-warning { background: #fef3c7; color: #92400e; }
+  .status-block-danger  { background: #fee2e2; color: #991b1b; }
+</style>
+{% endblock %}

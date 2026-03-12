@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Events – CampusConnect{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="fas fa-calendar-alt"></i> Campus Events</h1>
+  {% if current_user.role in ['admin','faculty'] %}
+  <button class="btn btn-primary" onclick="openCreateEventModal()">
+    <i class="fas fa-plus"></i> New Event
+  </button>
+  {% endif %}
+</div>
+
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>Status</label>
+    <select id="filterStatus" class="form-control form-control-sm" onchange="filterEvents()">
+      <option value="">All</option>
+      <option value="approved">Approved</option>
+      <option value="pending">Pending</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Type</label>
+    <select id="filterType" class="form-control form-control-sm" onchange="filterEvents()">
+      <option value="">All Types</option>
+      <option value="academic">Academic</option>
+      <option value="cultural">Cultural</option>
+      <option value="sports">Sports</option>
+      <option value="seminar">Seminar</option>
+      <option value="workshop">Workshop</option>
+    </select>
+  </div>
+  <div class="filter-group search-group">
+    <input type="text" id="searchEvents" class="form-control form-control-sm" 
+           placeholder="Search events..." onkeyup="filterEvents()"/>
+    <i class="fas fa-search"></i>
+  </div>
+</div>
+
+<div id="eventsGrid" class="events-grid">
+  <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading events...</div>
+</div>
+
+{% include 'events/_create_modal.html' %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/events.js') }}"></script>
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+<script>loadEventsGrid();</script>
+{% endblock %}

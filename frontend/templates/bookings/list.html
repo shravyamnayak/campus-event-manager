@@ -1,0 +1,548 @@
+{% extends "base.html" %}
+{% block title %}Bookings – CampusConnect{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>
+      <i class="fas fa-ticket-alt"></i>
+      {% if current_user.is_admin() %}All Bookings{% else %}My Bookings{% endif %}
+    </h1>
+    <span class="text-muted">
+      {% if current_user.is_admin() %}
+        Manage all campus event registrations
+      {% else %}
+        Track your event registrations and waitlists
+      {% endif %}
+    </span>
+  </div>
+  <a href="{{ url_for('events.list_events') }}" class="btn btn-primary">
+    <i class="fas fa-calendar-alt"></i> Browse Events
+  </a>
+</div>
+
+<!-- ── Summary Stats ──────────────────────────────────────────── -->
+<div class="stats-grid stats-grid-4" id="bookingStats">
+  <div class="stat-card stat-blue">
+    <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
+    <div class="stat-info">
+      <h3 id="statTotal">—</h3>
+      <p>Total</p>
+    </div>
+  </div>
+  <div class="stat-card stat-green">
+    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+    <div class="stat-info">
+      <h3 id="statRegistered">—</h3>
+      <p>Registered</p>
+    </div>
+  </div>
+  <div class="stat-card stat-orange">
+    <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+    <div class="stat-info">
+      <h3 id="statWaitlisted">—</h3>
+      <p>Waitlisted</p>
+    </div>
+  </div>
+  <div class="stat-card stat-red">
+    <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+    <div class="stat-info">
+      <h3 id="statCancelled">—</h3>
+      <p>Cancelled</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Filter & Search Bar ────────────────────────────────────── -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>Status</label>
+    <select id="filterBookingStatus" class="form-control form-control-sm" onchange="filterBookings()">
+      <option value="">All Statuses</option>
+      <option value="registered">Registered</option>
+      <option value="waitlisted">Waitlisted</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+  </div>
+
+  {% if current_user.is_admin() %}
+  <div class="filter-group">
+    <label>Role</label>
+    <select id="filterRole" class="form-control form-control-sm" onchange="filterBookings()">
+      <option value="">All Roles</option>
+      <option value="student">Student</option>
+      <option value="faculty">Faculty</option>
+    </select>
+  </div>
+  {% endif %}
+
+  <div class="filter-group">
+    <label>Sort By</label>
+    <select id="sortBookings" class="form-control form-control-sm" onchange="filterBookings()">
+      <option value="newest">Newest First</option>
+      <option value="oldest">Oldest First</option>
+      <option value="event">Event Name (A–Z)</option>
+    </select>
+  </div>
+
+  <div class="filter-group search-group" style="flex:1; min-width:220px;">
+    <label>Search</label>
+    <div style="position:relative;">
+      <input
+        type="text"
+        id="searchBookings"
+        class="form-control form-control-sm"
+        placeholder="Search by event or user…"
+        oninput="filterBookings()"
+      />
+      <i class="fas fa-search"
+         style="position:absolute; right:.65rem; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:.8rem; pointer-events:none;"></i>
+    </div>
+  </div>
+
+  <div class="filter-group" style="align-self:flex-end;">
+    <button class="btn btn-outline btn-sm" onclick="resetFilters()">
+      <i class="fas fa-undo"></i> Reset
+    </button>
+  </div>
+</div>
+
+<!-- ── View Toggle ────────────────────────────────────────────── -->
+<div class="view-toggle">
+  <button id="viewTableBtn" class="view-btn active" onclick="setView('table')" title="Table View">
+    <i class="fas fa-table"></i>
+  </button>
+  <button id="viewCardBtn" class="view-btn" onclick="setView('card')" title="Card View">
+    <i class="fas fa-th-large"></i>
+  </button>
+  <span id="resultCount" class="result-count"></span>
+</div>
+
+<!-- ── Table View ─────────────────────────────────────────────── -->
+<div id="tableView">
+  <div id="bookingsTable" class="table-container">
+    <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading bookings…</div>
+  </div>
+</div>
+
+<!-- ── Card View ──────────────────────────────────────────────── -->
+<div id="cardView" style="display:none;">
+  <div id="bookingsCards" class="bookings-card-grid"></div>
+</div>
+
+<!-- ── Cancel Confirmation Modal ─────────────────────────────── -->
+<div class="modal" id="cancelConfirmModal">
+  <div class="modal-dialog" style="max-width:420px;">
+    <div class="modal-header">
+      <h3><i class="fas fa-exclamation-triangle" style="color:var(--warning)"></i> Cancel Registration</h3>
+      <button onclick="closeModal('cancelConfirmModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p>Are you sure you want to cancel your registration for:</p>
+      <p id="cancelEventName" style="font-weight:700; margin:.75rem 0; color:var(--primary);"></p>
+      <p class="text-muted" style="font-size:.85rem;">
+        If you cancel, your spot may be given to the next person on the waitlist.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('cancelConfirmModal')">
+        <i class="fas fa-times"></i> Keep Registration
+      </button>
+      <button class="btn btn-danger" id="confirmCancelBtn">
+        <i class="fas fa-trash-alt"></i> Yes, Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/bookings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+
+<style>
+  /* ── Stats 4-col ─────────────────────────────────────────────── */
+  .stats-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  @media (max-width: 768px) {
+    .stats-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ── View Toggle ─────────────────────────────────────────────── */
+  .view-toggle {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .85rem;
+  }
+  .view-btn {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .35rem .65rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all .15s;
+    font-size: .85rem;
+  }
+  .view-btn.active,
+  .view-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+  }
+  .result-count {
+    margin-left: auto;
+    font-size: .82rem;
+    color: var(--text-muted);
+  }
+
+  /* ── Table ───────────────────────────────────────────────────── */
+  .data-table .col-id    { width: 55px; }
+  .data-table .col-event { min-width: 200px; }
+  .data-table .col-user  { min-width: 150px; }
+  .data-table .col-date  { width: 150px; }
+  .data-table .col-stat  { width: 120px; }
+  .data-table .col-act   { width: 130px; text-align: right; }
+
+  .event-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: .875rem;
+  }
+  .event-link:hover { text-decoration: underline; }
+
+  .user-cell {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+  }
+  .user-cell span { font-size: .875rem; font-weight: 500; }
+  .user-cell small { font-size: .75rem; color: var(--text-muted); }
+
+  .no-results {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+  }
+  .no-results i { font-size: 2.5rem; opacity: .35; margin-bottom: .75rem; display: block; }
+  .no-results p { font-size: .9rem; }
+
+  /* ── Card Grid ───────────────────────────────────────────────── */
+  .bookings-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.1rem;
+  }
+  .booking-card {
+    background: #fff;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: .65rem;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .booking-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .booking-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: .5rem;
+  }
+  .booking-card-header h4 {
+    font-size: .92rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .booking-card-header h4 a {
+    text-decoration: none;
+    color: inherit;
+  }
+  .booking-card-header h4 a:hover { color: var(--primary); }
+  .booking-card-meta {
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+  }
+  .booking-card-meta span {
+    font-size: .8rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+  }
+  .booking-card-meta span i {
+    width: 14px;
+    color: var(--primary);
+    opacity: .7;
+  }
+  .booking-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: .65rem;
+    border-top: 1px solid var(--border);
+    gap: .5rem;
+  }
+  .booking-id {
+    font-size: .72rem;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+</style>
+
+<script>
+  let allBookings   = [];
+  let currentView   = 'table';
+  let pendingCancelId = null;
+
+  /* ── Boot ──────────────────────────────────────────────────── */
+  document.addEventListener('DOMContentLoaded', () => {
+    loadBookingsTable();
+  });
+
+  /* ── Fetch ─────────────────────────────────────────────────── */
+  async function loadBookingsTable() {
+    const { ok, data } = await apiFetch('/api/bookings');
+    if (!ok) {
+      document.getElementById('bookingsTable').innerHTML =
+        '<p class="text-danger" style="padding:1rem">Failed to load bookings.</p>';
+      return;
+    }
+    allBookings = data;
+    updateStats(data);
+    renderCurrent(data);
+  }
+
+  /* ── Stats ─────────────────────────────────────────────────── */
+  function updateStats(bookings) {
+    document.getElementById('statTotal').textContent      = bookings.length;
+    document.getElementById('statRegistered').textContent = bookings.filter(b => b.status === 'registered').length;
+    document.getElementById('statWaitlisted').textContent = bookings.filter(b => b.status === 'waitlisted').length;
+    document.getElementById('statCancelled').textContent  = bookings.filter(b => b.status === 'cancelled').length;
+  }
+
+  /* ── Filter & Sort ─────────────────────────────────────────── */
+  function filterBookings() {
+    const status = document.getElementById('filterBookingStatus').value;
+    const search = document.getElementById('searchBookings').value.toLowerCase().trim();
+    const sort   = document.getElementById('sortBookings').value;
+    const role   = document.getElementById('filterRole')?.value || '';
+
+    let list = allBookings.filter(b => {
+      const matchStatus = !status || b.status === status;
+      const matchSearch = !search  ||
+        (b.event_title || '').toLowerCase().includes(search) ||
+        (b.user_name   || '').toLowerCase().includes(search);
+      const matchRole = !role || (b.user_role === role);
+      return matchStatus && matchSearch && matchRole;
+    });
+
+    // Sort
+    if (sort === 'oldest') {
+      list = list.slice().sort((a, b) => new Date(a.registered_at) - new Date(b.registered_at));
+    } else if (sort === 'event') {
+      list = list.slice().sort((a, b) => (a.event_title || '').localeCompare(b.event_title || ''));
+    } else {
+      list = list.slice().sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at));
+    }
+
+    renderCurrent(list);
+  }
+
+  function resetFilters() {
+    document.getElementById('filterBookingStatus').value = '';
+    document.getElementById('searchBookings').value      = '';
+    document.getElementById('sortBookings').value        = 'newest';
+    const roleEl = document.getElementById('filterRole');
+    if (roleEl) roleEl.value = '';
+    renderCurrent(allBookings);
+  }
+
+  /* ── View Toggle ───────────────────────────────────────────── */
+  function setView(v) {
+    currentView = v;
+    document.getElementById('tableView').style.display = v === 'table' ? 'block' : 'none';
+    document.getElementById('cardView').style.display  = v === 'card'  ? 'block' : 'none';
+    document.getElementById('viewTableBtn').classList.toggle('active', v === 'table');
+    document.getElementById('viewCardBtn').classList.toggle('active', v === 'card');
+    filterBookings();
+  }
+
+  function renderCurrent(list) {
+    document.getElementById('resultCount').textContent =
+      `${list.length} result${list.length !== 1 ? 's' : ''}`;
+    if (currentView === 'table') renderTable(list);
+    else renderCards(list);
+  }
+
+  /* ── Table Render ──────────────────────────────────────────── */
+  function renderTable(bookings) {
+    const container = document.getElementById('bookingsTable');
+    const isAdmin   = {{ 'true' if current_user.is_admin() else 'false' }};
+
+    if (!bookings.length) {
+      container.innerHTML = `
+        <div class="no-results">
+          <i class="fas fa-ticket-alt"></i>
+          <p>No bookings match your filters.</p>
+        </div>`;
+      return;
+    }
+
+    const userCol = isAdmin
+      ? `<th class="col-user">User</th>`
+      : '';
+
+    const rows = bookings.map((b, i) => {
+      const userCell = isAdmin
+        ? `<td>
+             <div class="user-cell">
+               <span>${escHtml(b.user_name || '—')}</span>
+               <small>${escHtml(b.user_role || '')}</small>
+             </div>
+           </td>`
+        : '';
+
+      const canCancel = b.status !== 'cancelled';
+      const actionBtn = canCancel
+        ? `<button class="btn btn-sm btn-danger" onclick="openCancelModal(${b.id}, '${escHtml(b.event_title || '')}')">
+             <i class="fas fa-times"></i> Cancel
+           </button>`
+        : `<span style="color:#94a3b8; font-size:.8rem;">—</span>`;
+
+      return `
+        <tr class="booking-row">
+          <td class="col-id" style="color:var(--text-muted); font-size:.8rem;">#${b.id}</td>
+          <td class="col-event">
+            <a class="event-link" href="/events/${b.event_id}">${escHtml(b.event_title || '—')}</a>
+          </td>
+          ${userCell}
+          <td class="col-stat">
+            <span class="status-badge status-${b.status}">${capitalize(b.status)}</span>
+          </td>
+          <td class="col-date" style="font-size:.82rem; color:var(--text-muted);">
+            ${formatDate(b.registered_at)}
+          </td>
+          <td class="col-act">
+            <div style="display:flex; gap:.4rem; justify-content:flex-end; align-items:center;">
+              <a href="/bookings/${b.id}" class="btn btn-sm btn-outline" title="View Detail">
+                <i class="fas fa-eye"></i>
+              </a>
+              ${actionBtn}
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-id">#ID</th>
+            <th class="col-event">Event</th>
+            ${userCol}
+            <th class="col-stat">Status</th>
+            <th class="col-date">Registered</th>
+            <th class="col-act">Actions</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  /* ── Card Render ───────────────────────────────────────────── */
+  function renderCards(bookings) {
+    const container = document.getElementById('bookingsCards');
+    const isAdmin   = {{ 'true' if current_user.is_admin() else 'false' }};
+
+    if (!bookings.length) {
+      container.innerHTML = `
+        <div class="no-results" style="grid-column:1/-1;">
+          <i class="fas fa-ticket-alt"></i>
+          <p>No bookings match your filters.</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = bookings.map(b => {
+      const canCancel = b.status !== 'cancelled';
+      const userLine  = isAdmin
+        ? `<span><i class="fas fa-user"></i> ${escHtml(b.user_name || '—')}</span>`
+        : '';
+
+      return `
+        <div class="booking-card">
+          <div class="booking-card-header">
+            <h4><a href="/events/${b.event_id}">${escHtml(b.event_title || '—')}</a></h4>
+            <span class="status-badge status-${b.status}">${capitalize(b.status)}</span>
+          </div>
+          <div class="booking-card-meta">
+            ${userLine}
+            <span><i class="fas fa-clock"></i> Registered: ${formatDate(b.registered_at)}</span>
+          </div>
+          <div class="booking-card-footer">
+            <span class="booking-id">Booking #${b.id}</span>
+            <div style="display:flex; gap:.4rem;">
+              <a href="/bookings/${b.id}" class="btn btn-sm btn-outline">
+                <i class="fas fa-eye"></i> View
+              </a>
+              ${canCancel
+                ? `<button class="btn btn-sm btn-danger" onclick="openCancelModal(${b.id}, '${escHtml(b.event_title || '')}')">
+                     <i class="fas fa-times"></i> Cancel
+                   </button>`
+                : ''}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  /* ── Cancel Flow ───────────────────────────────────────────── */
+  function openCancelModal(bookingId, eventTitle) {
+    pendingCancelId = bookingId;
+    document.getElementById('cancelEventName').textContent = eventTitle;
+    document.getElementById('confirmCancelBtn').onclick = () => doCancel(bookingId);
+    openModal('cancelConfirmModal');
+  }
+
+  async function doCancel(bookingId) {
+    const btn = document.getElementById('confirmCancelBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cancelling…';
+
+    const { ok, data } = await apiFetch(`/api/bookings/${bookingId}/cancel`, 'POST');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-trash-alt"></i> Yes, Cancel';
+    closeModal('cancelConfirmModal');
+
+    if (ok) {
+      showToast('Registration cancelled successfully.', 'warning');
+      // Update in-place instead of full reload
+      const booking = allBookings.find(b => b.id === bookingId);
+      if (booking) booking.status = 'cancelled';
+      updateStats(allBookings);
+      filterBookings();
+    } else {
+      showToast(data.error || 'Failed to cancel registration.', 'danger');
+    }
+  }
+
+  /* ── Helpers ───────────────────────────────────────────────── */
+  function capitalize(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  }
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}CampusConnect – Campus Event Management{% endblock %}
+{% block content %}
+<div class="landing">
+  <div class="landing-hero">
+    <div class="hero-text">
+      <h1><i class="fas fa-university"></i> CampusConnect</h1>
+      <p>Real-time event scheduling, venue booking, and campus coordination — all in one place.</p>
+      <div class="hero-actions">
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
+          <i class="fas fa-sign-in-alt"></i> Login
+        </a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-outline btn-lg">
+          <i class="fas fa-user-plus"></i> Register
+        </a>
+      </div>
+    </div>
+    <div class="hero-features">
+      <div class="feature-card">
+        <i class="fas fa-calendar-check"></i>
+        <h3>Smart Scheduling</h3>
+        <p>Conflict-free event scheduling with real-time venue availability.</p>
+      </div>
+      <div class="feature-card">
+        <i class="fas fa-tasks"></i>
+        <h3>Multi-Role Approvals</h3>
+        <p>Admin, Faculty, and Student roles with streamlined approval workflows.</p>
+      </div>
+      <div class="feature-card">
+        <i class="fas fa-bell"></i>
+        <h3>Live Notifications</h3>
+        <p>Instant updates on approvals, cancellations, and registrations.</p>
+      </div>
+      <div class="feature-card">
+        <i class="fas fa-chart-bar"></i>
+        <h3>Resource Analytics</h3>
+        <p>Track venue usage and event attendance at a glance.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

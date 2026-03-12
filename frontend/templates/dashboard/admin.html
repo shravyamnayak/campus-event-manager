@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
+  <span class="text-muted">Full system overview & control</span>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card stat-blue">
+    <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
+    <div class="stat-info"><h3>{{ stats.total_events }}</h3><p>Total Events</p></div>
+  </div>
+  <div class="stat-card stat-orange">
+    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+    <div class="stat-info"><h3>{{ stats.pending_events }}</h3><p>Pending Approval</p></div>
+  </div>
+  <div class="stat-card stat-green">
+    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+    <div class="stat-info"><h3>{{ stats.approved_events }}</h3><p>Approved Events</p></div>
+  </div>
+  <div class="stat-card stat-purple">
+    <div class="stat-icon"><i class="fas fa-users"></i></div>
+    <div class="stat-info"><h3>{{ stats.total_users }}</h3><p>Total Users</p></div>
+  </div>
+  <div class="stat-card stat-red">
+    <div class="stat-icon"><i class="fas fa-map-marker-alt"></i></div>
+    <div class="stat-info"><h3>{{ stats.total_venues }}</h3><p>Venues</p></div>
+  </div>
+  <div class="stat-card stat-teal">
+    <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
+    <div class="stat-info"><h3>{{ stats.total_bookings }}</h3><p>Total Registrations</p></div>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  <div class="dash-panel">
+    <div class="panel-header">
+      <h2><i class="fas fa-clock"></i> Pending Approvals</h2>
+      <a href="{{ url_for('events.list_events') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    {% if pending_events %}
+    <div class="pending-list">
+      {% for event in pending_events %}
+      <div class="pending-item" id="pending-{{ event.id }}">
+        <div class="pending-info">
+          <h4>{{ event.title }}</h4>
+          <p>
+            <span class="badge badge-{{ event.event_type }}">{{ event.event_type }}</span>
+            <span><i class="fas fa-user"></i> {{ event.organizer.name }}</span>
+            <span><i class="fas fa-calendar"></i> {{ event.start_datetime.strftime('%b %d, %Y %H:%M') }}</span>
+            {% if event.venue %}<span><i class="fas fa-map-marker-alt"></i> {{ event.venue.name }}</span>{% endif %}
+          </p>
+        </div>
+        <div class="pending-actions">
+          <button class="btn btn-sm btn-success" onclick="approveEvent({{ event.id }}, 'approve')">
+            <i class="fas fa-check"></i> Approve
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="approveEvent({{ event.id }}, 'reject')">
+            <i class="fas fa-times"></i> Reject
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-check-double"></i><p>No pending approvals</p></div>
+    {% endif %}
+  </div>
+
+  <div class="dash-panel">
+    <div class="panel-header">
+      <h2><i class="fas fa-plus-circle"></i> Quick Actions</h2>
+    </div>
+    <div class="quick-actions">
+      <a href="{{ url_for('venues.list_venues') }}" class="qa-card">
+        <i class="fas fa-map-marker-alt"></i>
+        <span>Manage Venues</span>
+      </a>
+      <a href="{{ url_for('events.list_events') }}" class="qa-card">
+        <i class="fas fa-calendar-alt"></i>
+        <span>All Events</span>
+      </a>
+      <a href="{{ url_for('bookings.list_bookings') }}" class="qa-card">
+        <i class="fas fa-ticket-alt"></i>
+        <span>All Bookings</span>
+      </a>
+      <button class="qa-card" onclick="openAddVenueModal()">
+        <i class="fas fa-plus"></i>
+        <span>Add Venue</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Venue Modal -->
+<div class="modal" id="addVenueModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="fas fa-map-marker-alt"></i> Add New Venue</h3>
+      <button onclick="closeModal('addVenueModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Venue Name</label>
+        <input type="text" id="venueName" class="form-control" placeholder="Main Auditorium"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" id="venueLocation" class="form-control" placeholder="Block A, Ground Floor"/>
+        </div>
+        <div class="form-group">
+          <label>Capacity</label>
+          <input type="number" id="venueCapacity" class="form-control" placeholder="500"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Amenities</label>
+        <input type="text" id="venueAmenities" class="form-control" placeholder="Projector, AC, Sound System"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addVenueModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAddVenue()">
+        <i class="fas fa-plus"></i> Add Venue
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/events.js') }}"></script>
+<script src="{{ url_for('static', filename='js/venues.js') }}"></script>
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="fas fa-graduation-cap"></i> Student Dashboard</h1>
+</div>
+
+<div class="stats-grid stats-grid-3">
+  <div class="stat-card stat-blue">
+    <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
+    <div class="stat-info"><h3>{{ my_bookings|length }}</h3><p>My Registrations</p></div>
+  </div>
+  <div class="stat-card stat-green">
+    <div class="stat-icon"><i class="fas fa-check"></i></div>
+    <div class="stat-info">
+      <h3>{{ my_bookings|selectattr('status','equalto','registered')|list|length }}</h3>
+      <p>Confirmed</p>
+    </div>
+  </div>
+  <div class="stat-card stat-orange">
+    <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+    <div class="stat-info">
+      <h3>{{ my_bookings|selectattr('status','equalto','waitlisted')|list|length }}</h3>
+      <p>Waitlisted</p>
+    </div>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  <div class="dash-panel">
+    <div class="panel-header">
+      <h2><i class="fas fa-calendar-check"></i> My Registrations</h2>
+      <a href="{{ url_for('bookings.list_bookings') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    {% if my_bookings %}
+    <div class="event-list">
+      {% for booking in my_bookings[:5] %}
+      <div class="event-item">
+        <div class="event-info">
+          <h4><a href="{{ url_for('events.event_detail', event_id=booking.event.id) }}">{{ booking.event.title }}</a></h4>
+          <p>
+            <span class="status-badge status-{{ booking.status }}">{{ booking.status|capitalize }}</span>
+            <span><i class="fas fa-calendar"></i> {{ booking.event.start_datetime.strftime('%b %d, %Y') }}</span>
+          </p>
+        </div>
+        <button class="btn btn-sm btn-danger" onclick="cancelBooking({{ booking.id }})">Cancel</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-ticket-alt"></i><p>No registrations yet. Browse events!</p></div>
+    {% endif %}
+  </div>
+
+  <div class="dash-panel">
+    <div class="panel-header">
+      <h2><i class="fas fa-fire"></i> Upcoming Events</h2>
+      <a href="{{ url_for('events.list_events') }}" class="btn btn-sm btn-outline">Browse All</a>
+    </div>
+    <div class="event-list">
+      {% for event in upcoming %}
+      <div class="event-item">
+        <div class="event-type-dot dot-{{ event.event_type }}"></div>
+        <div class="event-info">
+          <h4><a href="{{ url_for('events.event_detail', event_id=event.id) }}">{{ event.title }}</a></h4>
+          <p>
+            <span class="badge badge-{{ event.event_type }}">{{ event.event_type }}</span>
+            <span><i class="fas fa-calendar"></i> {{ event.start_datetime.strftime('%b %d') }}</span>
+            <span><i class="fas fa-users"></i> {{ event.attendee_count() }}/{{ event.max_attendees }}</span>
+          </p>
+        </div>
+        <a href="{{ url_for('events.event_detail', event_id=event.id) }}" class="btn btn-sm btn-primary">Register</a>
+      </div>
+      {% else %}
+      <div class="empty-state"><i class="fas fa-calendar"></i><p>No upcoming events</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/bookings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+{% endblock %}
