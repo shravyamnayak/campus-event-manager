@@ -7,6 +7,35 @@ from utils.helpers import send_notification
 
 bookings_bp = Blueprint('bookings', __name__)
 
+ 
+@bookings_bp.route('/api/bookings/stats')
+@login_required
+def api_booking_stats():
+    try:
+        if current_user.is_admin():
+            base = Booking.query
+        else:
+            base = Booking.query.filter_by(user_id=current_user.id)
+ 
+        total      = base.count()
+        registered = base.filter_by(status='registered').count()
+        waitlisted = base.filter_by(status='waitlisted').count()
+        cancelled  = base.filter_by(status='cancelled').count()
+ 
+        return jsonify({
+            'success':    True,
+            'total':      total,
+            'registered': registered,
+            'waitlisted': waitlisted,
+            'cancelled':  cancelled,
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False, 'error': str(e),
+            'total': 0, 'registered': 0, 'waitlisted': 0, 'cancelled': 0
+        }), 500
+    
 @bookings_bp.route('/bookings')
 @login_required
 def list_bookings():
